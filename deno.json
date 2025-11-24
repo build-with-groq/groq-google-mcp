@@ -1,0 +1,21 @@
+{
+  "description": "e2b.dev remote functions",
+  "version": "0.1.0",
+  "entry": "e2b.ts",
+  "tasks": {
+    "calendar": "deno run --allow-env --allow-net --allow-read ./calendar.ts",
+    "drive": "deno run --allow-env --allow-net --allow-read ./drive.ts",
+    "gmail": "deno run --allow-env --allow-net --allow-read ./gmail.ts",
+    "auth": "deno run --allow-env --allow-net --allow-run --allow-read --allow-write ./auth-cli.ts",
+    "auth-server": "deno run --allow-env --allow-net --allow-read ./auth-server.ts",
+    "serve": "deno serve --allow-env --allow-net --allow-read ./app/main.js"
+  },
+  "imports": {
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@^1.22.0",
+    "@openai/agents": "npm:@openai/agents@^0.3.2",
+    "e2b": "npm:e2b@^2.7.0",
+    "hono": "npm:hono",
+    "openai": "npm:openai@^6.9.1",
+    "zod": "npm:zod@^4.1.12"
+  }
+}

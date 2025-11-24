@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Groq x Google MCP Connectors</title>
+  <link rel="icon" type="image/x-icon" href="https://groq.com/favicon.ico">
+  <script src="https://unpkg.com/alpinejs@3.10.5/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Prism for code highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Nunito', sans-serif;
+      background-color: #fff;
+    }
+    
+    /* Demo Background Pattern */
+    #demo-container {
+      background-color: #FFFBF0;
+      background-image: radial-gradient(#E5E5E5 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Fredoka', sans-serif;
+    }
+    .font-mono {
+      font-family: 'Menlo', monospace;
+    }
+    .neo-card {
+      border: 2px solid #000;
+      box-shadow: 8px 8px 0px 0px #000;
+      transition: box-shadow 0.1s ease;
+      position: absolute;
+      background: white;
+      max-height: 60%; /* Relative to container */
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .neo-card:active {
+      box-shadow: 4px 4px 0px 0px #000;
+    }
+    .neo-card.dashboard-card {
+      pointer-events: none; /* Make dashboard card not clickable */
+      transition: none !important; /* Remove transition for dashboard */
+    }
+    .neo-card.dashboard-card * {
+      pointer-events: auto; /* But keep interactive elements clickable */
+    }
+    .neo-card.dashboard-card:active {
+      box-shadow: 8px 8px 0px 0px #000 !important; /* Keep shadow unchanged for dashboard */
+    }
+    .neo-card-header {
+      cursor: grab;
+      user-select: none;
+    }
+    .neo-card-header:active {
+      cursor: grabbing;
+    }
+    .neo-card.dragging {
+      user-select: none;
+      cursor: grabbing;
+    }
+    .neo-card.dragging * {
+      user-select: none;
+      cursor: grabbing;
+    }
+    .neo-button {
+      border: 2px solid #000;
+      box-shadow: 4px 4px 0px 0px #000;
+      transition: all 0.1s ease;
+    }
+    .neo-button:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0px 0px #000;
+    }
+    .neo-input {
+      border: 2px solid #000;
+      box-shadow: 4px 4px 0px 0px #000;
+    }
+    .neo-input:focus {
+      outline: none;
+      transform: translate(-1px, -1px);
+      box-shadow: 5px 5px 0px 0px #000;
+    }
+    .loading-spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left-color: #000;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .neo-card::-webkit-scrollbar {
+      width: 8px;
+      background: transparent;
+    }
+    .neo-card::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .neo-card::-webkit-scrollbar-thumb {
+      background: transparent;
+      border-radius: 4px;
+    }
+    .neo-card:hover::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .neo-card:hover::-webkit-scrollbar-thumb:hover {
+      background: #000;
+    }
+    
+    /* Markdown Styles inside cards */
+    .markdown-body {
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      max-width: 100%;
+    }
+    .markdown-body p { margin-bottom: 0.5em; overflow-wrap: break-word; }
+    .markdown-body ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.5em; }
+    .markdown-body ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 0.5em; }
+    .markdown-body code { background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 4px; font-family: 'Menlo', monospace; font-size: 0.9em; word-break: break-all; }
+    .markdown-body pre { background: #f4f4f4; padding: 10px; border-radius: 8px; overflow-x: auto; margin-bottom: 0.5em; border: 1px solid #000; max-width: 100%; }
+    .markdown-body table {
+      width: 100%;
+      max-width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0.5em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .markdown-body table thead,
+    .markdown-body table tbody,
+    .markdown-body table tr {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+    .markdown-body table th,
+    .markdown-body table td {
+      border: 1px solid #000;
+      padding: 4px 8px;
+      text-align: left;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .markdown-body table th {
+      background: rgba(0,0,0,0.05);
+      font-weight: bold;
+    }
+    
+    /* Falling Animation */
+    @keyframes fall-in {
+      0% { 
+        transform: translateY(-120vh) rotate(var(--start-rotate)); 
+        opacity: 0; 
+      }
+      70% { 
+        transform: translateY(calc(var(--spawn-y) + 20px)) rotate(var(--bounce-rotate)); 
+        opacity: 1; 
+      }
+      100% { 
+        transform: translateY(var(--spawn-y)) rotate(var(--end-rotate)); 
+        opacity: 1; 
+      }
+    }
+    .animate-fall {
+      animation: fall-in var(--fall-duration) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      animation-delay: var(--fall-delay);
+    }
+    
+    @keyframes bounce-subtle {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .animate-bounce-subtle {
+      animation: bounce-subtle 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen w-screen text-black overflow-x-hidden">
+  
+  <!-- DEMO SECTION -->
+  <div id="demo-container" x-data="connectorApp()" x-init="init()" class="relative w-full h-screen border-b-4 border-black overflow-hidden">
+    
+    <!-- Header (Static) -->
+    <div class="absolute top-8 left-0 right-0 text-center z-0 pointer-events-none">
+      <div class="inline-block bg-white border-2 border-black px-8 py-4 rounded-full shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-2 pointer-events-auto relative group hover:scale-105 transition-transform">
+        <h1 class="text-3xl md:text-5xl font-bold text-black flex items-center gap-3 justify-center flex-wrap">
+          <span class="iconify text-yellow-400" data-icon="mdi:google-circles-extended"></span>
+          Groq x Google MCP
+        </h1>
+      </div>
+    </div>
+    
+    <!-- Login/Control Center (Static) -->
+    <div class="absolute top-32 left-0 right-0 flex justify-center z-0 pointer-events-none">
+      <div class="pointer-events-auto flex flex-col items-center gap-4">
+        
+        <!-- Logged Out State -->
+        <div x-show="!isLoggedIn" class="flex flex-col items-center gap-3">
+        <button 
+          @click="loginWithGoogle()" 
+            class="neo-button bg-[#FF90E8] hover:bg-[#ff7ae5] text-black px-8 py-4 rounded-2xl font-bold text-xl flex items-center gap-3 transform hover:scale-105 transition-transform">
+          <span class="iconify w-6 h-6" data-icon="mdi:google"></span>
+          Login with Google
+        </button>
+        </div>
+        
+        <!-- Logged In State -->
+        <div x-show="isLoggedIn" class="flex flex-col items-center gap-4">
+          <div class="bg-[#B8FF9F] border-2 border-black px-6 py-2 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2">
+            <span class="iconify w-5 h-5" data-icon="mdi:check-decagram"></span>
+            <span class="font-bold">Logged In & Ready!</span>
+          </div>
+          
+          <div class="flex gap-2">
+          <button 
+            @click="logout()" 
+            class="neo-button bg-white hover:bg-gray-50 text-black px-6 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
+            <span class="iconify" data-icon="mdi:logout text-2xl"></span>
+            Logout
+          </button>
+        </div>
+        </div>
+        
+      </div>
+    </div>
+    
+    <!-- Draggable Area -->
+    <div class="absolute inset-0 pointer-events-none">
+      
+      <template x-for="(card, key) in cards" :key="key">
+        <div 
+          class="neo-card rounded-3xl w-[350px] md:w-[400px] flex flex-col pointer-events-auto"
+          :class="card.bgClass + (card.animating ? ' animate-fall' : '')"
+          :style="`
+            left: ${card.x}px; 
+            top: ${card.animating ? 0 : card.y}px; 
+            z-index: ${card.z};
+            transform: ${card.animating ? 'translateY(-120vh)' : `rotate(${card.rotation}deg)`};
+            --spawn-y: ${card.y}px;
+            --start-rotate: ${card.animParams.startRotate}deg;
+            --bounce-rotate: ${card.animParams.bounceRotate}deg;
+            --end-rotate: ${card.rotation}deg;
+            --fall-duration: ${card.animParams.duration}s;
+            --fall-delay: ${card.animParams.delay}s;
+          `"
+          @mousedown.stop="startDrag($event, key)"
+          @animationend="onAnimationEnd(key)"
+        >
+          <!-- Card Header -->
+          <div class="neo-card-header p-4 border-b-2 border-black bg-white flex items-center justify-center rounded-t-[22px] relative">
+            <div class="flex items-center gap-3">
+              <div :class="card.bgClass" class="w-10 h-10 rounded-full border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <span class="iconify w-6 h-6" :data-icon="card.icon"></span>
+              </div>
+              <h3 class="text-xl font-bold" x-text="card.title"></h3>
+            </div>
+            <div class="absolute right-4 flex gap-2">
+               <button @click.stop="clearMessages(key)" class="hover:bg-gray-100 p-1 rounded border-2 border-transparent hover:border-black transition-all text-2xl" title="Clear Chat">
+                  <span class="iconify text-2xl" data-icon="mdi:refresh"></span>
+               </button>
+            </div>
+          </div>
+          
+          <!-- Chat Area -->
+          <div class="p-4 flex-1 flex flex-col min-h-0">
+            <div class="flex-1 mb-4 space-y-4 pr-2 overflow-y-auto" :id="key + '-chat'">
+              <template x-for="msg in card.messages" :key="msg.id">
+                <div :class="msg.role === 'user' ? 'ml-auto bg-white' : 'mr-auto ' + card.lightBgClass" class="relative border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.1)] max-w-[90%] group overflow-visible">
+                  <button @click="deleteMessage(key, msg.id)" class="absolute -top-2 -right-2 bg-red-500 text-white border-2 border-black rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 z-10">
+                    <span class="iconify" data-icon="mdi:close"></span>
+                  </button>
+                  <div class="markdown-body text-sm font-mono break-words overflow-wrap-anywhere" x-html="renderMarkdown(msg.content)"></div>
+                </div>
+              </template>
+              <div x-show="card.processing" class="flex items-center gap-2 text-sm font-bold opacity-50">
+                 <div class="loading-spinner w-4 h-4 border-2"></div>
+                 <span x-text="card.loadingText"></span>
+              </div>
+              <div x-show="card.error" class="bg-red-100 border-2 border-black p-2 rounded text-red-600 text-xs">
+                 <pre class="whitespace-pre-wrap break-words" x-text="card.error"></pre>
+              </div>
+            </div>
+      
+            <!-- Input Area -->
+            <div class="mt-auto">
+              <div class="flex gap-2">
+                <input 
+                  type="text" 
+                  x-model="card.input"
+                  @keydown.enter="askCard(key)"
+                  :placeholder="card.placeholder"
+                  class="neo-input flex-1 px-3 py-2 rounded-xl font-mono text-sm bg-white"
+                />
+                <button 
+                  @click="askCard(key)" 
+                  :disabled="card.processing"
+                  class="neo-button bg-black text-white px-3 py-2 rounded-xl hover:bg-gray-800 disabled:opacity-50">
+                  <span class="iconify w-5 h-5" data-icon="mdi:send"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+      
+    </div>
+    
+    <!-- Footer (Static) -->
+    <div class="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
+      <p class="font-bold text-gray-500 text-sm flex items-center justify-center gap-2 pointer-events-auto">
+        Made with <span class="iconify text-red-500" data-icon="mdi:heart"></span> and Groq
+      </p>
+    </div>
+    
+    <!-- Dashboard Card -->
+    <div 
+         class="neo-card dashboard-card !bg-white flex flex-col rounded-3xl border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden"
+         :style="`
+            left: ${dashboard.x}px; 
+            top: ${dashboard.y}px; 
+            z-index: ${dashboard.z};
+            width: ${dashboard.width}px;
+            height: 45vh;
+            transform: rotate(${dashboard.rotation}deg);
+         `">
+         
+       <!-- Header -->
+       <div class="bg-black text-white p-4 flex items-center justify-between relative">
+          <div class="flex items-center gap-3">
+             <span class="iconify text-2xl text-[#FF90E8]" data-icon="mdi:view-dashboard"></span>
+             <h2 class="text-xl font-bold">Today’s Agenda</h2>
+          </div>
+          <div class="absolute right-4 flex gap-2">
+             <button @click.stop="reloadDashboard()" class="hover:bg-gray-800 p-1 rounded border-2 border-transparent hover:border-white transition-all text-2xl text-white" title="Reload Dashboard">
+                <span class="iconify text-2xl" data-icon="mdi:refresh"></span>
+             </button>
+          </div>
+       </div>
+       
+       <!-- Content -->
+       <div class="flex-1 overflow-y-auto p-6 bg-white relative">
+          
+          <!-- Logged Out State -->
+          <div x-show="!isLoggedIn" class="flex flex-col items-center justify-center h-full gap-2 text-center">
+             <div class="bg-gray-100 p-6 rounded-full">
+                <span class="iconify text-2xl text-gray-400" data-icon="mdi:shield-lock-outline"></span>
+             </div>
+             <div class="max-w-md">
+                <h3 class="text-2xl font-bold mb-2">Login to View Your Day</h3>
+                <p class="text-gray-600 mb-6">
+                   Connect your Google account to see a summary of your important emails, calendar events, and recent files powered by Groq.
+                </p>
+                <button 
+                   @click="loginWithGoogle()" 
+                   class="neo-button bg-[#FF90E8] hover:bg-[#ff7ae5] text-black px-8 py-3 rounded-xl font-bold flex items-center gap-2 mx-auto">
+                   <span class="iconify text-xl" data-icon="mdi:google"></span>
+                   Connect Google
+                </button>
+             </div>
+          </div>
+
+          <!-- Logged In Content -->
+          <div x-show="isLoggedIn" class="h-full flex flex-col">
+             <!-- Loading State (only show if no data at all) -->
+             <div x-show="dashboard.loading && (!dashboard.data?.events?.length && !dashboard.data?.emails?.length && !dashboard.data?.files?.length)" class="flex flex-col items-center justify-center flex-1 gap-4">
+                <div class="loading-spinner w-8 h-8 border-4 border-black border-l-transparent"></div>
+                <p class="font-bold text-gray-500 animate-pulse">Loading...</p>
+             </div>
+             
+             <!-- Data State (show as soon as we have any data or when loading completes) -->
+             <div x-show="dashboard.data && (!dashboard.loading || dashboard.data?.events?.length || dashboard.data?.emails?.length || dashboard.data?.files?.length)" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Calendar Column -->
+                <div class="space-y-4">
+                   <a href="https://calendar.google.com" target="_blank" class="font-bold text-lg flex items-center gap-2 border-b-2 border-[#FFD93D] pb-2 hover:text-[#e6c200] transition-colors cursor-pointer no-underline text-black">
+                      <span class="iconify text-[#FFD93D]" data-icon="mdi:calendar-clock"></span>
+                      Today's Schedule
+                      <span class="iconify text-gray-400 text-sm ml-auto" data-icon="mdi:open-in-new"></span>
+                   </a>
+                   <div class="space-y-3">
+                      <template x-for="event in dashboard.data?.events || []" :key="event.id">
+                         <a :href="event.link || 'https://calendar.google.com'" target="_blank" class="block bg-[#FFF8D6] p-3 rounded-xl border border-black text-sm hover:scale-[1.02] transition-transform cursor-pointer no-underline text-black group">
+                            <div class="flex gap-3 items-start">
+                                <div class="font-bold min-w-[60px] bg-white/50 px-2 py-1 rounded text-center group-hover:bg-white transition-colors" x-text="event.time"></div>
+                                <div x-text="event.title" class="font-medium pt-1"></div>
+                            </div>
+                         </a>
+                      </template>
+                   </div>
+                   <div x-show="!dashboard.data?.events?.length" class="flex flex-col items-center justify-center py-8 px-4 text-center">
+                      <div class="bg-[#FFF8D6] p-4 rounded-full mb-3 border-2 border-black">
+                         <span class="iconify text-3xl text-gray-400" data-icon="mdi:calendar-blank"></span>
+                      </div>
+                      <p class="text-gray-500 italic text-sm font-medium">No events scheduled for today</p>
+                   </div>
+                </div>
+                
+                <!-- Emails Column -->
+                <div class="space-y-4">
+                   <a href="https://mail.google.com" target="_blank" class="font-bold text-lg flex items-center gap-2 border-b-2 border-[#FF90E8] pb-2 hover:text-[#ff7ae5] transition-colors cursor-pointer no-underline text-black">
+                      <span class="iconify text-[#FF90E8]" data-icon="mdi:email"></span>
+                      Important Emails
+                      <span class="iconify text-gray-400 text-sm ml-auto" data-icon="mdi:open-in-new"></span>
+                   </a>
+                   <div class="space-y-3">
+                      <template x-for="(email, index) in dashboard.data?.emails || []" :key="email.id || email.subject || index">
+                         <a :href="email.link || (email.id ? 'https://mail.google.com/mail/u/0/#inbox/' + email.id : 'https://mail.google.com')" target="_blank" class="block bg-[#FFE6F7] p-3 rounded-xl border border-black text-sm hover:scale-[1.02] transition-transform cursor-pointer no-underline text-black">
+                            <div class="flex justify-between items-start mb-1">
+                               <span class="font-bold truncate pr-2" x-text="email.from"></span>
+                               <span class="text-[10px] uppercase tracking-wide bg-white/50 px-1.5 py-0.5 rounded border border-pink-200">Email</span>
+                            </div>
+                            <div class="font-semibold mb-1 truncate" x-text="email.subject"></div>
+                            <div class="text-xs text-gray-600 line-clamp-2" x-text="email.snippet"></div>
+                         </a>
+                      </template>
+                   </div>
+                   <div x-show="!dashboard.data?.emails?.length" class="flex flex-col items-center justify-center py-8 px-4 text-center">
+                      <div class="bg-[#FFE6F7] p-4 rounded-full mb-3 border-2 border-black">
+                         <span class="iconify text-3xl text-gray-400" data-icon="mdi:email-outline"></span>
+                      </div>
+                      <p class="text-gray-500 italic text-sm font-medium">No important emails found</p>
+                   </div>
+                </div>
+                
+                <!-- Drive Column -->
+                <div class="space-y-4">
+                   <a href="https://drive.google.com" target="_blank" class="font-bold text-lg flex items-center gap-2 border-b-2 border-[#60F5D8] pb-2 hover:text-[#4cdbc0] transition-colors cursor-pointer no-underline text-black">
+                      <span class="iconify text-[#60F5D8]" data-icon="mdi:google-drive"></span>
+                      Recent Files
+                      <span class="iconify text-gray-400 text-sm ml-auto" data-icon="mdi:open-in-new"></span>
+                   </a>
+                   <div class="space-y-3">
+                      <template x-for="file in dashboard.data?.files || []" :key="file.id">
+                         <a :href="file.link" target="_blank" class="flex items-center gap-3 bg-[#E0FFF9] p-3 rounded-xl border border-black text-sm hover:scale-[1.02] transition-transform cursor-pointer no-underline text-black">
+                            <div class="bg-white/50 p-2 rounded-lg border border-teal-200">
+                               <span class="iconify text-xl text-gray-700" data-icon="mdi:file-document"></span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                               <div class="font-bold truncate" x-text="file.name"></div>
+                               <div class="text-xs text-gray-500" x-text="file.type"></div>
+                            </div>
+                         </a>
+                      </template>
+                   </div>
+                   <div x-show="!dashboard.data?.files?.length" class="flex flex-col items-center justify-center py-8 px-4 text-center">
+                      <div class="bg-[#E0FFF9] p-4 rounded-full mb-3 border-2 border-black">
+                         <span class="iconify text-3xl text-gray-400" data-icon="mdi:folder-outline"></span>
+                      </div>
+                      <p class="text-gray-500 italic text-sm font-medium">No recent files found</p>
+                   </div>
+                </div>
+                
+             </div>
+             
+              <!-- Error State -->
+             <div x-show="dashboard.error" class="flex flex-col items-center justify-center flex-1 text-red-500 px-4">
+                <span class="iconify text-4xl mb-2" data-icon="mdi:alert-circle"></span>
+                <pre class="text-xs text-left whitespace-pre-wrap break-words max-w-full overflow-auto bg-red-50 p-3 rounded border border-red-300" x-text="dashboard.error"></pre>
+                <button @click="loadDashboard()" class="mt-4 underline font-bold">Try Again</button>
+             </div>
+          </div>
+       </div>
+    </div>
+    
+    <!-- Documentation Scroll Pill -->
+    <div class="absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none z-50">
+      <button 
+        @click="scrollToDocs()" 
+        class="neo-button bg-white hover:bg-gray-50 text-black px-8 py-4 rounded-full font-bold text-lg flex items-center gap-3 pointer-events-auto group hover:scale-105 transition-all animate-bounce-subtle">
+        <span class="iconify text-2xl" data-icon="mdi:book-open-variant"></span>
+        <span>Documentation</span>
+        <span class="iconify text-2xl mt-2 animate-bounce" data-icon="mdi:chevron-double-down"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- DOCS SECTION -->
+  <section id="docs-section" class="bg-white py-16 border-t border-black">
+    <div class="container mx-auto px-6 max-w-4xl">
+      
+      <!-- MDN Style Header -->
+      <div class="mb-12 border-b pb-8 border-gray-200">
+        <div class="flex items-center gap-3 mb-4 text-gray-500 font-mono text-sm uppercase tracking-wider">
+           <span class="iconify" data-icon="mdi:book-open-page-variant"></span>
+           Documentation
+        </div>
+        <h1 class="text-5xl font-extrabold text-black mb-4">
+          Groq x MCP: <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-600" style="background-image: linear-gradient(to right, #F43E01, #FF6B35);">Chatting with Google</span>
+        </h1>
+        <p class="text-xl text-gray-600 leading-relaxed">
+          This guide demonstrates how to use Groq's Model Context Protocol (MCP) integration to connect language models directly to Google services like Calendar, Gmail, and Drive.
+        </p>
+      </div>
+
+      <!-- Note Block -->
+      <div class="bg-blue-50 border border-blue-500 p-6 mb-12 rounded-lg">
+        <div class="flex items-center gap-2 font-bold text-blue-800 mb-2">
+          <span class="iconify" data-icon="mdi:information"></span>
+          <span class="uppercase tracking-wide text-xs">Background</span>
+        </div>
+        <p class="text-blue-900 m-0">
+          <strong>Model Context Protocol (MCP)</strong> is an open standard that enables AI models to securely access external data sources and APIs. Groq's implementation provides native MCP support, allowing models to interact with services like Google Calendar, Gmail, and Drive through a standardized interface without requiring custom integration code.
+        </p>
+      </div>
+
+      <!-- Content -->
+      <div class="prose prose-lg max-w-none text-gray-800">
+        <h2 class="flex items-center gap-3 text-3xl font-bold text-black mt-12 mb-6">
+          <span class="iconify" data-icon="mdi:code-braces"></span>
+          Basic Implementation
+        </h2>
+        <p>
+          The following example shows how to query Google Calendar using Groq's MCP connector. The model automatically determines which API calls to make based on the natural language input.
+        </p>
+
+        <!-- Code Block -->
+        <div class="relative group mt-8 mb-12 rounded-xl overflow-hidden shadow-2xl border border-gray-800">
+          <div class="absolute top-4 right-4 z-10">
+            <button onclick="copyCode(this)" class="bg-white/10 hover:bg-white/20 backdrop-blur text-white border border-white/20 px-4 py-2 rounded-lg text-sm font-mono font-bold transition-all flex items-center gap-2">
+              <span class="iconify" data-icon="mdi:content-copy"></span>
+              <span>Copy</span>
+            </button>
+          </div>
+          <div class="bg-[#1d1f21] px-4 py-2 text-gray-400 text-xs font-mono border-b border-gray-700 flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+            <span class="ml-2">fetch-groq.js</span>
+          </div>
+          <pre class="!m-0 !p-6 !bg-[#1d1f21]"><code class="language-javascript">const response = await fetch("https://api.groq.com/openai/v1/responses", {
+  method: "POST",
+  headers: {
+    "authorization": \`Bearer \${GROQ_API_KEY}\`, // Your Groq API Key
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({
+    model: "openai/gpt-oss-120b", // The model that knows how to use tools
+    tools: [{
+      type: "mcp",
+      server_label: "googlecalendar", // The magic MCP server
+      connector_id: "connector_googlecalendar",
+      authorization: googleToken, // <--- Your Google OAuth Access Token
+      require_approval: "never",
+    }],
+    input: "What's on my calendar for today?",
+  }),
+});
+
+const data = await response.json();
+console.log(data.choices[0].message.content);</code></pre>
+        </div>
+
+        <h2 class="flex items-center gap-3 text-3xl font-bold text-black mt-16 mb-6">
+          <span class="iconify" data-icon="mdi:play-circle-outline"></span>
+          Quick Start (Testing)
+        </h2>
+        <p>
+          The fastest way to test MCP connectors is using the OAuth Playground to generate a temporary access token.
+        </p>
+        
+        <ol class="space-y-4 text-gray-700">
+          <li>
+            <strong>Visit the OAuth Playground:</strong> Go to <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-blue-600 hover:underline">developers.google.com/oauthplayground</a>
+          </li>
+          <li>
+            <strong>Add scopes:</strong> Paste these into "Input your own scopes":
+            <pre class="!mt-2 !mb-0"><code class="language-plaintext">https://www.googleapis.com/auth/gmail.modify
+https://www.googleapis.com/auth/userinfo.email
+https://www.googleapis.com/auth/calendar.events
+https://www.googleapis.com/auth/drive.readonly</code></pre>
+          </li>
+          <li>
+            <strong>Authorize:</strong> Click "Authorize APIs" and log in with your Google account
+          </li>
+          <li>
+            <strong>Exchange code:</strong> Click "Exchange authorization code for tokens"
+          </li>
+          <li>
+            <strong>Copy token:</strong> Copy the access token (starts with <code>ya29.a0...</code>)
+          </li>
+        </ol>
+
+        <div class="bg-amber-50 border border-amber-500 p-6 mt-6 rounded-lg">
+          <div class="flex items-center gap-2 font-bold text-amber-800 mb-2">
+            <span class="iconify" data-icon="mdi:alert"></span>
+            <span class="uppercase tracking-wide text-xs">Important</span>
+          </div>
+          <p class="text-amber-900 m-0">
+            Playground tokens expire quickly (typically within minutes). For production use, set up OAuth credentials as described below.
+          </p>
+        </div>
+
+        <h2 class="flex items-center gap-3 text-3xl font-bold text-black mt-16 mb-6">
+          <span class="iconify" data-icon="mdi:cloud-lock"></span>
+          Setting Up OAuth (Production)
+        </h2>
+        <p>
+          For a persistent login system, you'll need to create OAuth credentials through Google Cloud Console.
+        </p>
+
+        <h3 class="text-2xl font-bold text-black mt-8 mb-4">1. Create a Google Cloud Project</h3>
+        <ol class="space-y-3 text-gray-700">
+          <li>Go to <a href="https://console.cloud.google.com" target="_blank" class="text-blue-600 hover:underline">console.cloud.google.com</a></li>
+          <li>Create a new project or select an existing one</li>
+          <li>Click <strong>+ Enable APIs and Services</strong></li>
+          <li>Search for and enable these APIs:
+            <ul class="list-disc pl-6 mt-2 space-y-1">
+              <li>Gmail API</li>
+              <li>Google Calendar API</li>
+              <li>Google Drive API</li>
+            </ul>
+          </li>
+        </ol>
+
+        <h3 class="text-2xl font-bold text-black mt-8 mb-4">2. Configure OAuth Consent Screen</h3>
+        <ol class="space-y-3 text-gray-700">
+          <li>Go to <strong>APIs & Services → OAuth consent screen</strong></li>
+          <li>Choose <strong>External</strong> and click <strong>Create</strong></li>
+          <li>Fill in the required app information</li>
+          <li>Click on your app, then go to <strong>Data Access</strong></li>
+          <li>Click <strong>Add or remove scopes</strong></li>
+          <li>Scroll down to <strong>Manually add scopes</strong> and paste:
+            <pre class="!mt-2"><code class="language-plaintext">https://www.googleapis.com/auth/gmail.modify
+https://www.googleapis.com/auth/userinfo.email
+https://www.googleapis.com/auth/calendar.events
+https://www.googleapis.com/auth/drive.readonly</code></pre>
+          </li>
+          <li>Click <strong>Update</strong></li>
+        </ol>
+
+        <h3 class="text-2xl font-bold text-black mt-8 mb-4">3. Create OAuth Credentials</h3>
+        <ol class="space-y-3 text-gray-700">
+          <li>Go to <strong>APIs & Services → Credentials</strong></li>
+          <li>Click <strong>Create Credentials → OAuth client ID</strong></li>
+          <li>Choose <strong>Web application</strong></li>
+          <li>Add authorized redirect URI: <code>http://localhost:8000/callback</code></li>
+          <li>Save and copy your <strong>Client ID</strong> and <strong>Client Secret</strong></li>
+        </ol>
+
+        <h3 class="text-2xl font-bold text-black mt-8 mb-4">4. Configure Environment</h3>
+        <p>Create a <code>.env</code> file in your project root:</p>
+        <div class="relative group mt-4 mb-8 rounded-xl overflow-hidden shadow-2xl border border-gray-800">
+          <div class="absolute top-4 right-4 z-10">
+            <button onclick="copyEnvCode(this)" class="bg-white/10 hover:bg-white/20 backdrop-blur text-white border border-white/20 px-4 py-2 rounded-lg text-sm font-mono font-bold transition-all flex items-center gap-2">
+              <span class="iconify" data-icon="mdi:content-copy"></span>
+              <span>Copy</span>
+            </button>
+          </div>
+          <div class="bg-[#1d1f21] px-4 py-2 text-gray-400 text-xs font-mono border-b border-gray-700 flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+            <span class="ml-2">.env</span>
+          </div>
+          <pre class="!m-0 !p-6 !bg-[#1d1f21]"><code class="language-bash">GROQ_API_KEY=your_groq_api_key_here
+GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_client_secret
+PORT=8000</code></pre>
+        </div>
+
+        <h3 class="text-2xl font-bold text-black mt-8 mb-4">5. Install Deno</h3>
+        <p>This project uses Deno, a modern JavaScript/TypeScript runtime. If you don't have Deno installed:</p>
+        
+        <div class="space-y-4 mt-4">
+          <div>
+            <p class="font-bold text-gray-700 mb-2">macOS / Linux:</p>
+            <div class="relative group rounded-xl overflow-hidden shadow-xl border border-gray-800">
+              <div class="bg-[#1d1f21] px-4 py-2 text-gray-400 text-xs font-mono border-b border-gray-700 flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span class="ml-2">terminal</span>
+              </div>
+              <pre class="!m-0 !p-6 !bg-[#1d1f21]"><code class="language-bash">curl -fsSL https://deno.land/install.sh | sh</code></pre>
+            </div>
+          </div>
+
+          <div>
+            <p class="font-bold text-gray-700 mb-2">Windows (PowerShell):</p>
+            <div class="relative group rounded-xl overflow-hidden shadow-xl border border-gray-800">
+              <div class="bg-[#1d1f21] px-4 py-2 text-gray-400 text-xs font-mono border-b border-gray-700 flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span class="ml-2">powershell</span>
+              </div>
+              <pre class="!m-0 !p-6 !bg-[#1d1f21]"><code class="language-bash">irm https://deno.land/install.ps1 | iex</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <p class="mt-4">For more installation options, visit <a href="https://deno.land/manual/getting_started/installation" target="_blank" class="text-blue-600 hover:underline">deno.land/manual/getting_started/installation</a></p>
+
+        <h3 class="text-2xl font-bold text-black mt-8 mb-4">6. Run the Application</h3>
+        <p>Start the server:</p>
+        <div class="relative group mt-4 mb-8 rounded-xl overflow-hidden shadow-xl border border-gray-800">
+          <div class="bg-[#1d1f21] px-4 py-2 text-gray-400 text-xs font-mono border-b border-gray-700 flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+            <span class="ml-2">terminal</span>
+          </div>
+          <pre class="!m-0 !p-6 !bg-[#1d1f21]"><code class="language-bash">deno task serve</code></pre>
+        </div>
+        <p>Visit <code>http://localhost:8000</code>, click "Login with Google", and start querying your services.</p>
+
+      </div>
+      <!-- Footer -->
+      <div class="mt-20 pt-8 text-center max-w-[100px] mx-auto">
+        <a href="https://groq.com" target="_blank" rel="noopener noreferrer">
+          <img
+            src="https://console.groq.com/powered-by-groq-light.svg"
+            alt="Powered by Groq for fast inference."
+          />
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Copy Code Function
+    function copyCode(btn) {
+      const code = btn.closest('.group').querySelector('code').innerText;
+      navigator.clipboard.writeText(code);
+      
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<span class="iconify" data-icon="mdi:check"></span><span>Copied!</span>';
+      btn.classList.add('bg-green-500', 'border-green-500');
+      
+      setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.classList.remove('bg-green-500', 'border-green-500');
+      }, 2000);
+    }
+
+    function copyEnvCode(btn) {
+      const code = btn.closest('.group').querySelector('code').innerText;
+      navigator.clipboard.writeText(code);
+      
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<span class="iconify" data-icon="mdi:check"></span><span>Copied!</span>';
+      btn.classList.add('bg-green-500', 'border-green-500');
+      
+      setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.classList.remove('bg-green-500', 'border-green-500');
+      }, 2000);
+    }
+
+    function connectorApp() {
+      return {
+        _initialized: false,
+        isLoggedIn: false,
+        googleToken: '',
+        maxZIndex: 10,
+        dragging: null,
+        offset: { x: 0, y: 0 },
+        lastMousePos: { x: 0, y: 0 },
+        velocity: { x: 0, y: 0 },
+        
+        dashboard: {
+          loading: false,
+          loadingRequestId: null,
+          data: { events: [], emails: [], files: [] },
+          error: null,
+          x: 0,
+          y: 0,
+          z: 0,
+          width: 1000,
+          rotation: -1,
+          retryCount: 0
+        },
+        
+        cards: {
+          calendar: { 
+            title: 'Calendar',
+            icon: 'mdi:calendar-clock',
+            bgClass: 'bg-[#FFD93D]',
+            lightBgClass: 'bg-[#FFF8D6]',
+            x: 0, y: 0, z: 1, rotation: 0,
+            input: 'whats on my schedule today',
+            defaultInput: 'whats on my schedule today',
+            placeholder: 'Ask calendar...',
+            loadingText: 'Thinking...',
+            messages: [], 
+            processing: false, 
+            error: '',
+            animating: true,
+            animParams: { duration: 1, delay: 0, startRotate: 0, bounceRotate: 0 }
+          },
+          gmail: { 
+            title: 'Gmail',
+            icon: 'mdi:gmail',
+            bgClass: 'bg-[#FF90E8]',
+            lightBgClass: 'bg-[#FFE6F7]',
+            x: 0, y: 0, z: 2, rotation: 0,
+            input: 'what was my last email from groq',
+            defaultInput: 'what was my last email from groq',
+            placeholder: 'Search emails...',
+            loadingText: 'Checking...',
+            messages: [], 
+            processing: false, 
+            error: '',
+            animating: true,
+            animParams: { duration: 1, delay: 0, startRotate: 0, bounceRotate: 0 }
+          },
+          drive: { 
+            title: 'Drive',
+            icon: 'mdi:google-drive',
+            bgClass: 'bg-[#60F5D8]',
+            lightBgClass: 'bg-[#E0FFF9]',
+            x: 0, y: 0, z: 3, rotation: 0,
+            input: 'list files in my main folder',
+            defaultInput: 'list files in my main folder',
+            placeholder: 'Find files...',
+            loadingText: 'Searching...',
+            messages: [], 
+            processing: false, 
+            error: '',
+            animating: true,
+            animParams: { duration: 1, delay: 0, startRotate: 0, bounceRotate: 0 }
+          },
+          omni: {
+            title: 'Omni Assistant',
+            icon: 'mdi:auto-fix',
+            bgClass: 'bg-[#A0E7E5]',
+            lightBgClass: 'bg-[#E0F7FA]',
+            x: 0, y: 0, z: 4, rotation: 0,
+            input: 'summarize my day from emails and calendar',
+            defaultInput: 'summarize my day from emails and calendar',
+            placeholder: 'Ask everything...',
+            loadingText: 'Thinking...',
+            messages: [],
+            processing: false,
+            error: '',
+            animating: true,
+            animParams: { duration: 1, delay: 0, startRotate: 0, bounceRotate: 0 }
+          }
+        },
+
+        init() {
+          // Prevent multiple initializations using a global flag
+          // Alpine.js can call init() multiple times, so we use a global flag
+          if (window.__dashboardInitialized) {
+            return;
+          }
+          window.__dashboardInitialized = true;
+          this._initialized = true;
+          
+          const token = localStorage.getItem('google_token');
+          const loginTime = localStorage.getItem('google_login_time');
+          
+          if (token && loginTime) {
+            const now = Date.now();
+            const elapsed = now - parseInt(loginTime);
+            const fiveMinutes = 5 * 60 * 1000;
+            
+            if (elapsed < fiveMinutes) {
+              this.googleToken = token;
+              this.isLoggedIn = true;
+              console.log('Token valid. Time remaining: ' + Math.round((fiveMinutes - elapsed) / 1000) + ' seconds');
+              console.log('=== GOOGLE ACCESS TOKEN ===');
+              console.log(token);
+              console.log('=== Use this token in curl commands ===');
+              // Call loadDashboard directly - no setTimeout needed
+              this.loadDashboard();
+            } else {
+              console.log('Token expired');
+              localStorage.removeItem('google_token');
+              localStorage.removeItem('google_login_time');
+            }
+          }
+          
+          this.resetLayout();
+
+          window.addEventListener('mousemove', (e) => this.onDrag(e));
+          window.addEventListener('mouseup', () => this.stopDrag());
+          // Handle resize
+          window.addEventListener('resize', () => this.resetLayout());
+        },
+        
+        onAnimationEnd(key) {
+          this.cards[key].animating = false;
+        },
+        
+        resetLayout() {
+          const container = document.getElementById('demo-container');
+          const width = container ? container.clientWidth : window.innerWidth;
+          const height = container ? container.clientHeight : window.innerHeight;
+          
+          const random = (min, max) => Math.random() * (max - min) + min;
+          
+          const keys = Object.keys(this.cards);
+          const cardWidth = 400;
+          
+          // Position Dashboard
+          const dashWidth = Math.min(width * 0.9, 1200);
+          const dashHeight = height * 0.45; // 45vh in pixels
+          this.dashboard.width = dashWidth;
+          this.dashboard.x = (width - dashWidth) / 2;
+          this.dashboard.y = height * 0.35;
+          
+          // Calculate dashboard corners
+          const dashLeft = this.dashboard.x;
+          const dashRight = this.dashboard.x + dashWidth;
+          const dashTop = this.dashboard.y;
+          const dashBottom = this.dashboard.y + dashHeight;
+          
+          // Use smaller offset for smaller views, larger for desktop
+          const cornerOffset = width < 768 ? 5 : 20; // Closer to corners on small views
+          const cardHeight = 400; // Approximate card height
+          
+          // Four corners: top-left, top-right, bottom-left, bottom-right
+          // Adjust vertical positioning to prevent overlap
+          const topY = dashTop - cardHeight / 2 - cornerOffset;
+          const bottomY = dashBottom - cardHeight / 2 + cornerOffset;
+          
+          const corners = [
+            { x: dashLeft - cardWidth / 2 - cornerOffset, y: topY },
+            { x: dashRight - cardWidth / 2 + cornerOffset, y: topY },
+            { x: dashLeft - cardWidth / 2 - cornerOffset, y: bottomY },
+            { x: dashRight - cardWidth / 2 + cornerOffset, y: bottomY }
+          ];
+          
+          keys.forEach((key, index) => {
+            const card = this.cards[key];
+            
+            card.animParams = {
+              duration: random(0.8, 1.2),
+              delay: index * 0.1 + random(0, 0.2),
+              startRotate: random(-25, 25),
+              bounceRotate: random(-10, 10)
+            };
+            
+            const baseRot = random(-2, 2);
+            card.baseRotation = baseRot;
+            card.rotation = baseRot;
+            
+            // Position at dashboard corners for all screen sizes
+            const corner = corners[index % corners.length];
+            const cornerIndex = index % corners.length;
+            const fuzzX = width < 768 ? random(-5, 5) : random(-15, 15); // Less fuzz on small views
+            const fuzzY = width < 768 ? random(-5, 5) : random(-25, 25);
+            
+            // Add vertical offset: more for top corners, less for bottom corners
+            const verticalOffset = (cornerIndex < 2) ? 150 : 50; // Top corners get 150px, bottom corners get 50px
+            
+            let targetX = corner.x + fuzzX;
+            let targetY = corner.y + fuzzY + verticalOffset;
+            
+            // Only constrain X position for desktop, allow Y to go off-screen for all views
+            if (width >= 768) {
+              const minX = 10;
+              const maxX = width - cardWidth - 10;
+              
+              targetX = Math.max(minX, Math.min(maxX, targetX));
+              // Don't constrain Y - allow cards to go off-screen vertically
+            }
+            // For smaller views, don't constrain at all - allow cards to go off-screen
+            
+            card.x = targetX;
+            card.y = targetY;
+            
+            card.animating = false;
+            this.$nextTick(() => {
+              card.animating = true;
+            });
+          });
+        },
+        
+        startDrag(e, cardId) {
+          // Only prevent dragging if clicking directly on interactive elements
+          const target = e.target;
+          const closestButton = target.closest('button');
+          
+          // Don't drag if clicking on input, button, or inside a button
+          if (target.tagName === 'INPUT' || target.tagName === 'BUTTON' || closestButton) {
+            return;
+          }
+          
+          // Prevent text selection during drag
+          e.preventDefault();
+          e.stopPropagation();
+          
+          this.dragging = cardId;
+          
+          let card;
+          if (cardId === 'dashboard') {
+             card = this.dashboard;
+          } else {
+          this.maxZIndex++;
+          this.cards[cardId].z = this.maxZIndex;
+          this.cards[cardId].animating = false;
+             card = this.cards[cardId];
+          }
+          
+          // Add dragging class to prevent text selection
+          const cardElement = e.currentTarget;
+          if (cardElement) {
+            cardElement.classList.add('dragging');
+          }
+          
+          const container = document.getElementById('demo-container');
+          if (!container) return;
+          
+          const containerRect = container.getBoundingClientRect();
+          
+          // Store initial rotation and position for relative calculations
+          this.dragStartRotation = card.rotation;
+          this.dragStartX = card.x;
+          this.dragStartY = card.y;
+          
+          // Store initial mouse position relative to container
+          // This way we can calculate delta movement accurately
+          this.dragStartMouseX = e.clientX - containerRect.left;
+          this.dragStartMouseY = e.clientY - containerRect.top;
+          
+          this.lastMousePos = { x: e.clientX, y: e.clientY };
+          this.velocity = { x: 0, y: 0 };
+        },
+        
+        onDrag(e) {
+          if (!this.dragging) return;
+          
+          const card = this.dragging === 'dashboard' ? this.dashboard : this.cards[this.dragging];
+          if (!card) return; // Safety check
+          
+          const container = document.getElementById('demo-container');
+          if (!container) return; // Safety check
+          
+          const containerRect = container.getBoundingClientRect();
+          
+          // Calculate current mouse position relative to container
+          const currentMouseX = e.clientX - containerRect.left;
+          const currentMouseY = e.clientY - containerRect.top;
+          
+          // Calculate delta from initial drag position
+          const deltaX = currentMouseX - this.dragStartMouseX;
+          const deltaY = currentMouseY - this.dragStartMouseY;
+          
+          // Apply delta to starting position (allow cards to go off-screen)
+          card.x = this.dragStartX + deltaX;
+          card.y = this.dragStartY + deltaY;
+          
+          // Rotation based on horizontal drag direction
+          // Drag left (negative delta) → counter-clockwise (decrease rotation)
+          // Drag right (positive delta) → clockwise (increase rotation)
+          if (this.dragStartX !== undefined) {
+            const rotationChange = deltaX * 0.03; // Small rotation factor - adjust for sensitivity
+          
+            // Apply rotation change to starting rotation
+            const targetRotation = this.dragStartRotation + rotationChange;
+          
+            // Clamp rotation to reasonable bounds
+            card.rotation = Math.max(-15, Math.min(15, targetRotation));
+          }
+          
+          const vx = e.clientX - this.lastMousePos.x;
+          this.velocity.x = vx;
+          this.lastMousePos = { x: e.clientX, y: e.clientY };
+        },
+        
+        stopDrag() {
+          if (this.dragging) {
+            // Remove dragging class from all cards
+            const cards = document.querySelectorAll('.neo-card');
+            cards.forEach(card => card.classList.remove('dragging'));
+          }
+          this.dragging = null;
+        },
+        
+        renderMarkdown(text) {
+          return marked.parse(text);
+        },
+        
+        addMessage(cardId, role, content) {
+          this.cards[cardId].messages.push({
+            id: Date.now() + Math.random(),
+            role,
+            content
+          });
+          this.$nextTick(() => {
+             const chat = document.getElementById(cardId + '-chat');
+             if (chat) chat.scrollTop = chat.scrollHeight;
+          });
+        },
+        
+        deleteMessage(cardId, msgId) {
+          this.cards[cardId].messages = this.cards[cardId].messages.filter(m => m.id !== msgId);
+        },
+        
+        clearMessages(cardId) {
+           this.cards[cardId].messages = [];
+           this.cards[cardId].error = '';
+           this.cards[cardId].input = this.cards[cardId].defaultInput;
+        },
+        
+        loginWithGoogle() {
+          window.location.href = '/auth';
+        },
+        
+        logout() {
+          localStorage.removeItem('google_token');
+          localStorage.removeItem('google_login_time');
+          this.googleToken = '';
+          this.isLoggedIn = false;
+          Object.keys(this.cards).forEach(k => this.cards[k].messages = []);
+        },
+        
+        scrollToDocs() {
+          document.getElementById('docs-section').scrollIntoView({ behavior: 'smooth' });
+        },
+        
+        async fetchConnectorData(endpoint, prompt, maxRetries = 3) {
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ input: prompt, token: this.googleToken })
+              });
+              
+              if (!response.ok) {
+                // Try to read the error message from the response
+                let errorMessage = 'HTTP ' + response.status + ': ' + response.statusText;
+                let errorDetails = null;
+                try {
+                  const errorText = await response.text();
+                  
+                  // Try to parse as JSON first
+                  try {
+                    const errorData = JSON.parse(errorText);
+                    
+                    // If we have structured error details, use them
+                    if (errorData.errorDetails) {
+                      errorDetails = errorData.errorDetails;
+                      errorMessage = errorData.error || errorMessage;
+                    } else if (errorData.error) {
+                      // Check if error is a string or object
+                      if (typeof errorData.error === 'object') {
+                        errorDetails = JSON.stringify(errorData.error, null, 2);
+                        errorMessage = errorData.error.message || errorData.error.type || 'Error from API';
+                      } else {
+                        errorMessage = errorData.error;
+                      }
+                    } else if (errorData.message) {
+                      errorMessage = errorData.message;
+                    } else {
+                      // Full error object
+                      errorDetails = JSON.stringify(errorData, null, 2);
+                      errorMessage = 'API Error (see details below)';
+                    }
+                  } catch (jsonError) {
+                    // Not JSON, use text directly
+                    if (errorText && errorText.trim()) {
+                      errorMessage = errorText;
+                    }
+                  }
+                } catch (readError) {
+                  // If we can't read the response, keep default error message
+                  console.warn('Could not read error response:', readError);
+                }
+                
+                // Create error object with details
+                const error = new Error(errorMessage);
+                if (errorDetails) {
+                  error.details = errorDetails;
+                }
+                throw error;
+              }
+              
+              const data = await response.json();
+              
+              // Check for error in response
+              if (data.error) {
+                console.error(endpoint + ' API error:', data.error);
+                const error = new Error(data.error);
+                if (data.errorDetails) {
+                  error.details = data.errorDetails;
+                }
+                throw error;
+              }
+              
+              let jsonStr = data.result;
+              
+              // Log raw response for debugging
+              console.log(endpoint + ' raw response:', jsonStr);
+              
+              // Handle null/undefined/empty responses
+              if (!jsonStr || jsonStr.trim() === '' || jsonStr === '[No response]') {
+                console.warn(endpoint + ': Empty or null response - raw:', jsonStr);
+                return []; // Return empty array
+              }
+              
+              // Check if response indicates no data (natural language responses)
+              const lowerStr = jsonStr.toLowerCase().trim();
+              if (lowerStr.startsWith('i wasn\'t able') || 
+                  lowerStr.startsWith('i looked') ||
+                  lowerStr.startsWith('i checked') ||
+                  lowerStr.startsWith('no ') || 
+                  lowerStr.startsWith("i'm sorry") || 
+                  lowerStr.startsWith("i'm unable") ||
+                  lowerStr.includes('no messages') ||
+                  lowerStr.includes('no events') ||
+                  lowerStr.includes('no files') ||
+                  lowerStr.includes('didn\'t find') ||
+                  lowerStr.includes('no events are listed')) {
+                console.log(endpoint + ': No data found - ' + jsonStr.substring(0, 50));
+                return []; // Return empty array for "no data" responses
+              }
+              
+              // Helper function to clean invisible/zero-width characters
+              const cleanJsonString = (str) => {
+                if (!str) return str;
+                // Remove zero-width spaces, zero-width non-joiners, and other invisible characters
+                // But keep regular spaces, newlines, and tabs
+                return str
+                  .replace(/[\u200B-\u200D\uFEFF]/g, '') // Zero-width spaces
+                  .replace(/[\u2060-\u206F]/g, '') // Word joiners
+                  .replace(/[\u202A-\u202E]/g, '') // Directional formatting
+                  .trim();
+              };
+              
+              // Helper function to repair JSON strings with special characters
+              const repairJsonString = (jsonStr) => {
+                let result = jsonStr;
+                
+                // First, clean invisible characters from the entire string
+                result = cleanJsonString(result);
+                
+                // Find and fix unterminated strings by tracking string state
+                let inString = false;
+                let escapeNext = false;
+                let stringStart = -1;
+                let chars = result.split('');
+                
+                for (let i = 0; i < chars.length; i++) {
+                  const char = chars[i];
+                  
+                  if (escapeNext) {
+                    escapeNext = false;
+                    continue;
+                  }
+                  
+                  if (char === '\\') {
+                    escapeNext = true;
+                    continue;
+                  }
+                  
+                  if (char === '"') {
+                    if (!inString) {
+                      inString = true;
+                      stringStart = i;
+                    } else {
+                      inString = false;
+                      stringStart = -1;
+                    }
+                  }
+                }
+                
+                // If we're still in a string at the end, close it before the next structural character
+                if (inString && stringStart >= 0) {
+                  // Find where to insert the closing quote (before comma, bracket, brace, or end)
+                  let insertPos = chars.length;
+                  for (let i = chars.length - 1; i > stringStart; i--) {
+                    const char = chars[i];
+                    if (char === ',' || char === '}' || char === ']' || char === '\n') {
+                      insertPos = i;
+                      break;
+                    }
+                  }
+                  chars.splice(insertPos, 0, '"');
+                  result = chars.join('');
+                }
+                
+                // Now clean invisible characters from within string values
+                // We'll do this by parsing character by character and rebuilding
+                let cleaned = '';
+                inString = false;
+                escapeNext = false;
+                
+                for (let i = 0; i < result.length; i++) {
+                  const char = result[i];
+                  
+                  if (escapeNext) {
+                    cleaned += char;
+                    escapeNext = false;
+                    continue;
+                  }
+                  
+                  if (char === '\\') {
+                    cleaned += char;
+                    escapeNext = true;
+                    continue;
+                  }
+                  
+                  if (char === '"') {
+                    cleaned += char;
+                    inString = !inString;
+                    continue;
+                  }
+                  
+                  if (inString) {
+                    // Inside a string, remove invisible characters
+                    if (!/[\u200B-\u200D\uFEFF\u2060-\u206F\u202A-\u202E]/.test(char)) {
+                      cleaned += char;
+                    }
+                  } else {
+                    // Outside strings, keep all characters
+                    cleaned += char;
+                  }
+                }
+                
+                return cleaned;
+              };
+              
+              // Helper function to extract and repair JSON
+              const extractAndRepairJson = (str) => {
+                // First, extract JSON from markdown code blocks if present
+                if (str.includes('```json')) {
+                  const match = str.match(/```json\s*([\s\S]*?)\s*```/);
+                  if (match && match[1]) {
+                    str = match[1].trim();
+                  }
+                } else if (str.includes('```')) {
+                  const match = str.match(/```\s*([\s\S]*?)\s*```/);
+                  if (match && match[1]) {
+                    str = match[1].trim();
+                  }
+                }
+                
+                // Clean invisible characters
+                str = cleanJsonString(str);
+                
+                // Find the start of JSON (array or object)
+                const arrayStart = str.indexOf('[');
+                const objectStart = str.indexOf('{');
+                
+                let jsonStart = -1;
+                let isArray = false;
+                
+                if (arrayStart !== -1 && (objectStart === -1 || arrayStart < objectStart)) {
+                  jsonStart = arrayStart;
+                  isArray = true;
+                } else if (objectStart !== -1) {
+                  jsonStart = objectStart;
+                  isArray = false;
+                }
+                
+                if (jsonStart === -1) {
+                  return null; // No JSON found
+                }
+                
+                // Extract from the start of JSON
+                let jsonStr = str.substring(jsonStart);
+                
+                // Try to find the end of the JSON by counting brackets/braces
+                let depth = 0;
+                let inString = false;
+                let escapeNext = false;
+                let endPos = -1;
+                
+                for (let i = 0; i < jsonStr.length; i++) {
+                  const char = jsonStr[i];
+                  
+                  if (escapeNext) {
+                    escapeNext = false;
+                    continue;
+                  }
+                  
+                  if (char === '\\') {
+                    escapeNext = true;
+                    continue;
+                  }
+                  
+                  if (char === '"' && !escapeNext) {
+                    inString = !inString;
+                    continue;
+                  }
+                  
+                  if (!inString) {
+                    if (isArray) {
+                      if (char === '[') depth++;
+                      if (char === ']') {
+                        depth--;
+                        if (depth === 0) {
+                          endPos = i + 1;
+                          break;
+                        }
+                      }
+                    } else {
+                      if (char === '{') depth++;
+                      if (char === '}') {
+                        depth--;
+                        if (depth === 0) {
+                          endPos = i + 1;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }
+                
+                if (endPos > 0) {
+                  jsonStr = jsonStr.substring(0, endPos);
+                }
+                
+                // Clean again after extraction
+                jsonStr = cleanJsonString(jsonStr);
+                
+                return jsonStr;
+              };
+              
+              // Extract JSON from the response
+              let extractedJson = extractAndRepairJson(jsonStr);
+              
+              if (!extractedJson) {
+                // No JSON found, check if it's a natural language response
+                const trimmed = jsonStr.trim();
+                console.error(endpoint + ': No JSON found in response');
+                console.error('Full response:', jsonStr);
+                
+                // Check if it's an error message
+                const lowerTrimmed = trimmed.toLowerCase();
+                if (lowerTrimmed.includes('error') || 
+                    lowerTrimmed.includes('failed') || 
+                    lowerTrimmed.includes('unauthorized') ||
+                    lowerTrimmed.includes('permission') ||
+                    lowerTrimmed.includes('invalid token') ||
+                    lowerTrimmed.includes('authentication')) {
+                  throw new Error('API returned error: ' + trimmed.substring(0, 200));
+                }
+                
+                if (attempt < maxRetries) {
+                  await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+                  continue;
+                } else {
+                  return [];
+                }
+              }
+              
+              // Check if it looks like JSON before parsing
+              const trimmed = extractedJson.trim();
+              if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+                console.error(endpoint + ': Extracted string is not JSON');
+                console.error('Full extracted string:', extractedJson);
+                if (attempt < maxRetries) {
+                  await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+                  continue;
+                } else {
+                  return [];
+                }
+              }
+              
+              // Try to parse JSON
+              let parsed;
+              try {
+                parsed = JSON.parse(extractedJson);
+              } catch (parseError) {
+                // Try repairing: fix unterminated strings and clean special characters
+                let repaired = repairJsonString(extractedJson);
+                
+                // Additional repairs: remove trailing commas and fix common issues
+                repaired = repaired
+                  .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+                  .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":'); // Quote unquoted keys
+                
+                try {
+                  parsed = JSON.parse(repaired);
+                } catch (secondError) {
+                  // Last attempt: try to extract valid JSON by truncating at error position
+                  const errorMatch = parseError.message.match(/position (\d+)/);
+                  if (errorMatch && errorMatch[1]) {
+                    const errorPos = parseInt(errorMatch[1]);
+                    // Try to find a valid JSON boundary before the error
+                    let truncated = repaired.substring(0, errorPos);
+                    // Try to close the JSON properly
+                    const openBraces = (truncated.match(/\{/g) || []).length;
+                    const closeBraces = (truncated.match(/\}/g) || []).length;
+                    const openBrackets = (truncated.match(/\[/g) || []).length;
+                    const closeBrackets = (truncated.match(/\]/g) || []).length;
+                    
+                    // Close any open structures
+                    truncated += '}'.repeat(Math.max(0, openBraces - closeBraces));
+                    truncated += ']'.repeat(Math.max(0, openBrackets - closeBrackets));
+                    
+                    try {
+                      parsed = JSON.parse(truncated);
+                    } catch (thirdError) {
+                      console.error(endpoint + ': JSON parse failed after all repair attempts');
+                      console.error('Original error:', parseError.message, 'at position', errorMatch[1]);
+                      console.error('Full extracted JSON string:', extractedJson);
+                      console.error('Repaired JSON string:', repaired);
+                      console.error('Truncated JSON string:', truncated);
+                      
+                      if (attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+                        continue;
+                      } else {
+                        return [];
+                      }
+                    }
+                  } else {
+                    console.error(endpoint + ': JSON parse failed after repair');
+                    console.error('Original error:', parseError.message);
+                    console.error('Full extracted JSON string:', extractedJson);
+                    console.error('Repaired JSON string:', repaired);
+                    
+                    if (attempt < maxRetries) {
+                      await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+                      continue;
+                    } else {
+                      return [];
+                    }
+                  }
+                }
+              }
+              
+              // Helper function to clean weird characters from text
+              const cleanText = (text) => {
+                if (!text || typeof text !== 'string') return text;
+                return text
+                  .replace(/[\u200B-\u200D\uFEFF]/g, '') // Zero-width spaces
+                  .replace(/[\u2060-\u206F]/g, '') // Word joiners
+                  .replace(/[\u202A-\u202E]/g, '') // Directional formatting
+                  .replace(/[\u00AD]/g, '') // Soft hyphens
+                  .replace(/[\u2000-\u200F]/g, '') // Various spaces
+                  .replace(/[\u2028-\u2029]/g, '') // Line/paragraph separators
+                  .trim();
+              };
+              
+              // Helper function to clean email data
+              const cleanEmailData = (emails) => {
+                if (!Array.isArray(emails)) return emails;
+                return emails.map(email => ({
+                  ...email,
+                  from: cleanText(email.from),
+                  subject: cleanText(email.subject),
+                  snippet: cleanText(email.snippet),
+                  // Keep id and link as-is
+                }));
+              };
+              
+              // Handle different response formats
+              let finalData = [];
+              if (Array.isArray(parsed)) {
+                finalData = parsed;
+              } else if (parsed && typeof parsed === 'object') {
+                // Handle wrapped responses (e.g., {"drive_files": [...]})
+                if (parsed.events || parsed.emails || parsed.files || parsed.drive_files) {
+                  finalData = parsed.events || parsed.emails || parsed.files || parsed.drive_files || [];
+                }
+                // If it's an object but not wrapped, return empty array
+                finalData = [];
+              }
+              
+              // Clean email data if this is the Gmail endpoint
+              if (endpoint === '/api/gmail' && Array.isArray(finalData)) {
+                finalData = cleanEmailData(finalData);
+              }
+              
+              // Log the final JSON output for debugging
+              console.log(endpoint + ' final JSON output:', JSON.stringify(finalData, null, 2));
+              
+              return finalData;
+              
+            } catch (e) {
+              console.error(endpoint + ' attempt ' + attempt + ' failed:', e.message);
+              
+              // If not the last attempt, wait before retrying
+              if (attempt < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 500 * attempt)); // Shorter backoff: 0.5s, 1s, 1.5s
+              }
+            }
+          }
+          return []; // Return empty array instead of null when all retries fail
+        },
+        
+        reloadDashboard() {
+          // Don't clear data immediately - keep it visible while loading
+          this.dashboard.error = null;
+          this.loadDashboard();
+        },
+        
+        async loadDashboard() {
+          if (!this.isLoggedIn) {
+             this.dashboard.loading = false;
+             return;
+          }
+          
+          // Prevent multiple simultaneous loads - check and set atomically
+          if (this.dashboard.loadingRequestId) {
+            console.log('Dashboard already loading, ignoring duplicate call. Current request ID:', this.dashboard.loadingRequestId);
+            return; // Exit early - don't start a new request
+          }
+          
+          // Generate unique request ID to prevent stale responses from overwriting data
+          const requestId = Date.now() + Math.random();
+          console.log('Starting dashboard load. Request ID:', requestId);
+          
+          // Set loading state and request ID atomically BEFORE any async operations
+          this.dashboard.loadingRequestId = requestId;
+          this.dashboard.loading = true;
+          
+          // Initialize data structure
+          this.dashboard.data = { events: [], emails: [], files: [] };
+          this.dashboard.error = null;
+          
+          // Prompts - explicitly request JSON array format
+          const calendarPrompt = `Show my calendar events for today. Return a JSON array with up to 5 events. Each event must have: id, title, time (formatted as "HH:MM AM/PM"), and link. If there are no events, return an empty array []. IMPORTANT: Respond only with valid JSON, no markdown tables, no text explanations - just the JSON array.`;
+          
+          const gmailPrompt = `Show my last 5 emails. Return a JSON array. Each email must have: id (can be null if unavailable), from, subject, snippet, and link (can be null if id is unavailable). If there are no emails, return an empty array []. IMPORTANT: Respond only with valid JSON, no markdown tables, no text explanations - just the JSON array.`;
+          
+          const drivePrompt = `List my recent files in Google Drive. Return a JSON array with up to 5 files. Each file must have: id, name, type (mimeType), and link. If there are no files, return an empty array []. IMPORTANT: Respond only with valid JSON, no markdown tables, no text explanations - just the JSON array.`;
+          
+          // Helper function to update dashboard data for a specific category
+          const updateCategory = (category, data) => {
+            // Check if this request is still the latest one
+            if (this.dashboard.loadingRequestId !== requestId) {
+              console.log('Stale dashboard request, ignoring update for', category);
+              return;
+            }
+            
+            // Update the specific category
+            if (category === 'events') {
+              this.dashboard.data.events = Array.isArray(data) ? data : (data?.events || []);
+            } else if (category === 'emails') {
+              this.dashboard.data.emails = Array.isArray(data) ? data : (data?.emails || []);
+            } else if (category === 'files') {
+              this.dashboard.data.files = Array.isArray(data) ? data : (data?.files || []);
+            }
+            
+            console.log('Dashboard updated', category + ':', JSON.stringify(this.dashboard.data[category], null, 2));
+            
+            // Clear loading state as soon as we have any data (show partial results immediately)
+            if (this.dashboard.loading && this.dashboard.loadingRequestId === requestId) {
+              const hasAnyData = 
+                (this.dashboard.data.events && this.dashboard.data.events.length > 0) ||
+                (this.dashboard.data.emails && this.dashboard.data.emails.length > 0) ||
+                (this.dashboard.data.files && this.dashboard.data.files.length > 0);
+              
+              if (hasAnyData) {
+                this.dashboard.loading = false;
+              }
+            }
+          };
+          
+          // Track completion of each category
+          let completedCount = 0;
+          const markComplete = () => {
+            completedCount++;
+            // Once all three have completed (or failed), clear loading state
+            // This ensures loading clears even if all requests return empty arrays
+            if (completedCount >= 3 && this.dashboard.loadingRequestId === requestId) {
+              this.dashboard.loading = false;
+              this.dashboard.loadingRequestId = null;
+            }
+          };
+          
+          // Call each endpoint independently - they will update the dashboard as they complete
+          const loadCalendar = async () => {
+            try {
+              const eventsData = await this.fetchConnectorData('/api/calendar', calendarPrompt, 3);
+              updateCategory('events', eventsData);
+            } catch (error) {
+              console.error('Calendar fetch failed:', error);
+              if (this.dashboard.loadingRequestId === requestId) {
+                updateCategory('events', []);
+                if (!this.dashboard.error) {
+                  const errorMsg = error?.message || error?.toString() || 'Unknown error';
+                  const errorDetails = error?.details ? '\n\n' + error.details : '';
+                  this.dashboard.error = 'Failed to load calendar: ' + errorMsg + errorDetails;
+                }
+              }
+            } finally {
+              markComplete();
+            }
+          };
+          
+          const loadGmail = async () => {
+            try {
+              const emailsData = await this.fetchConnectorData('/api/gmail', gmailPrompt, 3);
+              updateCategory('emails', emailsData);
+            } catch (error) {
+              console.error('Gmail fetch failed:', error);
+              if (this.dashboard.loadingRequestId === requestId) {
+                updateCategory('emails', []);
+                if (!this.dashboard.error) {
+                  const errorMsg = error?.message || error?.toString() || 'Unknown error';
+                  const errorDetails = error?.details ? '\n\n' + error.details : '';
+                  this.dashboard.error = 'Failed to load emails: ' + errorMsg + errorDetails;
+                }
+              }
+            } finally {
+              markComplete();
+            }
+          };
+          
+          const loadDrive = async () => {
+            try {
+              const filesData = await this.fetchConnectorData('/api/drive', drivePrompt, 3);
+              updateCategory('files', filesData);
+            } catch (error) {
+              console.error('Drive fetch failed:', error);
+              if (this.dashboard.loadingRequestId === requestId) {
+                updateCategory('files', []);
+                if (!this.dashboard.error) {
+                  const errorMsg = error?.message || error?.toString() || 'Unknown error';
+                  const errorDetails = error?.details ? '\n\n' + error.details : '';
+                  this.dashboard.error = 'Failed to load files: ' + errorMsg + errorDetails;
+                }
+              }
+            } finally {
+              markComplete();
+            }
+          };
+          
+          // Start all three calls independently - they'll update the dashboard as they complete
+          loadCalendar();
+          loadGmail();
+          loadDrive();
+        },
+        
+        async askCard(cardId) {
+          if (!this.isLoggedIn) {
+            this.cards[cardId].error = 'Please login with Google first';
+            return;
+          }
+          
+          const input = this.cards[cardId].input;
+          if (!input.trim()) return;
+          
+          this.addMessage(cardId, 'user', input);
+          this.cards[cardId].input = '';
+          this.cards[cardId].processing = true;
+          this.cards[cardId].error = '';
+          
+          const endpoint = cardId === 'omni' ? '/api/omni' : '/api/' + cardId;
+          
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ input: input, token: this.googleToken })
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+            }
+            
+            const data = await response.json();
+            this.addMessage(cardId, 'assistant', data.result);
+          } catch (error) {
+            console.error('[' + cardId + '] Error:', error);
+            const errorMsg = error?.message || error?.toString() || 'Unknown error';
+            const errorDetails = error?.details ? '\n\n' + error.details : '';
+            this.cards[cardId].error = 'Error: ' + errorMsg + errorDetails;
+          } finally {
+            this.cards[cardId].processing = false;
+          }
+        },
+      };
+    }
+  </script>
+</body>
+</html>
