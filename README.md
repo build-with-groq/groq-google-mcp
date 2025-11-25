@@ -217,7 +217,10 @@ const response = await fetch("https://api.groq.com/openai/v1/responses", {
 - [Gmail API](https://developers.google.com/gmail)
 - [Google Drive API](https://developers.google.com/drive)
 
+## Contributing
+
+Contributions are welcome! Pull requests are encouraged. Please feel free to submit a PR for any improvements, bug fixes, or new features.
+
 ## License
 
 MIT
-
