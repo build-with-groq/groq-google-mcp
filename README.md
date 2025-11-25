@@ -2,6 +2,8 @@
 
 A demo application showing how to use [Groq's MCP (Model Context Protocol) integration](https://groq.com) to interact with Google services (Calendar, Gmail, Drive) using natural language queries.
 
+https://github.com/user-attachments/assets/a1c2399e-ff9a-45fc-a364-833bc3500ea6
+
 ## Overview
 
 This project demonstrates Groq's new Groq x Google MCP Connectors, which allow AI models to directly access and query your Google services. It includes:
@@ -223,4 +225,4 @@ Contributions are welcome! Pull requests are encouraged. Please feel free to sub
 
 ## License
 
-MIT
+Apache 2.0
