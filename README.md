@@ -11,6 +11,24 @@ This project demonstrates Groq's new Groq x Google MCP Connectors, which allow A
 
 ## Quick Start (CLI)
 
+### Install Deno
+
+This project uses Deno: a modern JavaScript/TypeScript runtime. If you don't have Deno installed:
+
+**macOS / Linux:**
+```bash
+curl -fsSL https://deno.land/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://deno.land/install.ps1 | iex
+```
+
+For more installation options, visit [deno.land/manual/getting_started/installation](https://deno.land/manual/getting_started/installation)
+
+### Get OAuth Token
+
 The easiest way to get started is using the [OAuth Playground](https://developers.google.com/oauthplayground/):
 
 1. Visit https://developers.google.com/oauthplayground/
@@ -21,6 +39,8 @@ The easiest way to get started is using the [OAuth Playground](https://developer
 3. Click "Authorize APIs" and log in with your Google account
 4. Click "Exchange authorization code for tokens"
 5. Copy the access token (starts with `ya29.a0...`)
+
+### Configure Environment
 
 Create a `.env` file:
 ```bash
@@ -39,9 +59,25 @@ deno task drive     # Browse your files
 
 ## Web App Setup
 
-For a persistent login, set up Google OAuth:
+### Install Deno
+
+This project uses Deno, a modern JavaScript/TypeScript runtime. If you don't have Deno installed:
+
+**macOS / Linux:**
+```bash
+curl -fsSL https://deno.land/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://deno.land/install.ps1 | iex
+```
+
+For more installation options, visit [deno.land/manual/getting_started/installation](https://deno.land/manual/getting_started/installation)
 
 ### 1. Create OAuth Credentials
+
+For a persistent login, set up Google OAuth:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project (or select an existing one)
@@ -112,13 +148,13 @@ User Query → Groq API (with MCP tools) → Google APIs → Groq Response
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GROQ_API_KEY` | Yes | Your Groq API key |
-| `GOOGLE_AUTHORIZATION` | CLI only | OAuth access token (short-lived) |
-| `GOOGLE_CLIENT_ID` | Web app | OAuth client ID from Google Cloud |
-| `GOOGLE_CLIENT_SECRET` | Web app | OAuth client secret from Google Cloud |
-| `PORT` | No | Server port (default: 8000) |
+| Variable               | Required | Description                           |
+|------------------------|----------|---------------------------------------|
+| `GROQ_API_KEY`         | Yes      | Your Groq API key                     |
+| `GOOGLE_AUTHORIZATION` | CLI only | OAuth access token (short-lived)      |
+| `GOOGLE_CLIENT_ID`     | Web app  | OAuth client ID from Google Cloud     |
+| `GOOGLE_CLIENT_SECRET` | Web app  | OAuth client secret from Google Cloud |
+| `PORT`                 | No       | Server port (default: 8000)           |
 
 ## Project Structure
 
